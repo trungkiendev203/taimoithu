@@ -87,7 +87,7 @@ def _extract_instagram_sync(url: str) -> AnalyzeResponseData:
     media_items = []
     
     def create_format(item_url: str, is_vid: bool):
-        b64_url = base64.b64encode(item_url.encode('utf-8')).decode('utf-8')
+        b64_url = base64.urlsafe_b64encode(item_url.encode('utf-8')).decode('utf-8').rstrip('=')
         format_id = f"direct_url:{b64_url}"
         
         if is_vid:
@@ -119,7 +119,7 @@ def _extract_instagram_sync(url: str) -> AnalyzeResponseData:
 
     def get_proxied_thumb(url: str) -> str:
         if not url: return None
-        b64_url = base64.b64encode(url.encode('utf-8')).decode('utf-8')
+        b64_url = base64.urlsafe_b64encode(url.encode('utf-8')).decode('utf-8').rstrip('=')
         return f"/api/v1/proxy-image?url=base64:{b64_url}"
 
     if post.typename == 'GraphSidecar':
@@ -150,8 +150,8 @@ def _extract_instagram_sync(url: str) -> AnalyzeResponseData:
         media_items=media_items
     )
 
-async def _extract_tiktok_douyin_bilibili_async(url: str) -> AnalyzeResponseData:
-    api_url = f"http://tiktok_api:80/api/hybrid/video_data?url={urllib.parse.quote(url)}"
+async def _extract_tiktok_tikwm_async(url: str) -> AnalyzeResponseData:
+    api_url = f"https://www.tikwm.com/api/?url={urllib.parse.quote(url)}"
     
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
@@ -159,33 +159,31 @@ async def _extract_tiktok_douyin_bilibili_async(url: str) -> AnalyzeResponseData
             response.raise_for_status()
             result = response.json()
         except Exception as e:
-            raise Exception(f"Lỗi khi kết nối với TikTok/Douyin API: {str(e)}")
+            raise Exception(f"Lỗi khi kết nối với máy chủ tải TikTok: {str(e)}")
             
-    if result.get("code") != 200 or not result.get("data"):
-        raise Exception("Không thể trích xuất dữ liệu từ link này. Bài viết có thể riêng tư hoặc bị xoá.")
+    if result.get("code") != 0 or not result.get("data"):
+        raise Exception("Không thể trích xuất dữ liệu từ link TikTok này. Bài viết có thể bị xóa hoặc giới hạn quyền riêng tư.")
         
     data = result["data"]
-    aweme_type = data.get("aweme_type", 0) # 68 is usually image carousel
-    
-    title = data.get("desc", "Video")
+    title = data.get("title", "TikTok Video")
     author = data.get("author", {}).get("nickname", "Unknown")
     
     media_items = []
     
-    def get_proxied_thumb(url: str) -> str:
-        if not url: return None
-        b64_url = base64.b64encode(url.encode('utf-8')).decode('utf-8')
+    def get_proxied_thumb(img_url: str) -> str:
+        if not img_url: return None
+        b64_url = base64.urlsafe_b64encode(img_url.encode('utf-8')).decode('utf-8').rstrip('=')
         return f"/api/v1/proxy-image?url=base64:{b64_url}"
     
     def create_direct_format(item_url: str, is_vid: bool):
-        b64_url = base64.b64encode(item_url.encode('utf-8')).decode('utf-8')
+        b64_url = base64.urlsafe_b64encode(item_url.encode('utf-8')).decode('utf-8').rstrip('=')
         format_id = f"direct_url:{b64_url}"
         
         if is_vid:
             return [
                 FormatDTO(
                     format_id=format_id,
-                    quality_label="Video (Không Logo/No Watermark)",
+                    quality_label="Video (Không Logo)",
                     type="video",
                     has_audio=True,
                     has_video=True,
@@ -208,31 +206,21 @@ async def _extract_tiktok_douyin_bilibili_async(url: str) -> AnalyzeResponseData
                 )
             ]
             
-    def get_first_url(url_list):
-        if url_list and len(url_list) > 0:
-            return url_list[0]
-        return None
-        
     # Check if it's an image carousel
     images = data.get("images")
     if images and len(images) > 0:
-        for idx, img in enumerate(images):
-            img_url = get_first_url(img.get("url_list", []))
-            if img_url:
-                media_items.append(MediaItemDTO(
-                    index=idx + 1,
-                    thumbnail_url=get_proxied_thumb(img_url),
-                    is_video=False,
-                    formats=create_direct_format(img_url, False)
-                ))
-                
-        # Main thumbnail is the first image
-        main_thumbnail = get_first_url(images[0].get("url_list", []))
+        for idx, img_url in enumerate(images):
+            media_items.append(MediaItemDTO(
+                index=idx + 1,
+                thumbnail_url=get_proxied_thumb(img_url),
+                is_video=False,
+                formats=create_direct_format(img_url, False)
+            ))
+        main_thumbnail = images[0]
     else:
         # It's a single video
-        video_info = data.get("video", {})
-        video_url = get_first_url(video_info.get("play_addr", {}).get("url_list", []))
-        main_thumbnail = get_first_url(video_info.get("cover", {}).get("url_list", []))
+        video_url = data.get("play")
+        main_thumbnail = data.get("cover")
         
         if video_url:
             media_items.append(MediaItemDTO(
@@ -245,12 +233,13 @@ async def _extract_tiktok_douyin_bilibili_async(url: str) -> AnalyzeResponseData
     return AnalyzeResponseData(
         title=title,
         author_name=author,
-        author_avatar=get_proxied_thumb(get_first_url(data.get("author", {}).get("avatar_thumb", {}).get("url_list", []))),
+        author_avatar=get_proxied_thumb(data.get("author", {}).get("avatar")),
         thumbnail_url=get_proxied_thumb(main_thumbnail),
-        duration_seconds=data.get("duration", 0) // 1000 if data.get("duration") else None,
+        duration_seconds=data.get("duration", 0),
         formats=[],
         media_items=media_items
     )
+
 
 def _extract_metadata_sync(url: str) -> Dict[str, Any]:
     import os
@@ -389,13 +378,13 @@ async def extract_metadata(url: str) -> AnalyzeResponseData:
     if platform == "instagram":
         return await asyncio.to_thread(_extract_instagram_sync, url)
         
-    if platform in ["tiktok", "douyin", "bilibili"]:
+    if platform == "tiktok":
         try:
-            return await _extract_tiktok_douyin_bilibili_async(url)
+            return await _extract_tiktok_tikwm_async(url)
         except Exception as e:
-            # Fallback to yt-dlp if tiktok_api fails
-            print(f"tiktok_api failed: {e}. Falling back to yt-dlp.")
+            print(f"Custom TikTok API failed: {e}. Falling back to yt-dlp.")
             pass
+
 
     try:
         info = await asyncio.to_thread(_extract_metadata_sync, url)

@@ -64,7 +64,12 @@ async def proxy_image(url: str):
     """
     try:
         if url.startswith("base64:"):
-            url = base64.b64decode(url[7:]).decode("utf-8")
+            encoded = url[7:]
+            # Tương thích ngược: đổi khoảng trắng thành +
+            encoded = encoded.replace(" ", "+")
+            # Thêm padding nếu thiếu
+            encoded += "=" * ((-len(encoded)) % 4)
+            url = base64.urlsafe_b64decode(encoded).decode("utf-8")
             
         async with httpx.AsyncClient() as client:
             resp = await client.get(url, headers={
@@ -73,4 +78,5 @@ async def proxy_image(url: str):
             })
             return Response(content=resp.content, media_type=resp.headers.get("content-type", "image/jpeg"))
     except Exception as e:
-        return Response(status_code=400)
+        print(f"Proxy Image Error: {str(e)} - Source URL: {url}")
+        return Response(content=f"Proxy error: {str(e)}", status_code=400)

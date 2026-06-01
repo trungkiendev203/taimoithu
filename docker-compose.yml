@@ -45,9 +45,4 @@ services:
       - /app/node_modules
     command: npm run dev -- --host
 
-  tiktok_api:
-    image: evil0ctal/douyin_tiktok_download_api
-    container_name: taimoithu-tiktok-api
-    restart: always
-    environment:
-      - TZ=Asia/Ho_Chi_Minh
+

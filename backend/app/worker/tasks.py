@@ -112,17 +112,25 @@ def download_video_task(self, job_id: str, url: str, format_id: str, tier: str =
             publish_progress(job_id, "PROCESSING", 10.0, None, None)
             
             encoded_url = format_id.split('direct_url:')[1]
-            direct_url = base64.b64decode(encoded_url).decode('utf-8')
+            # Tương thích ngược: đổi khoảng trắng thành +
+            encoded_url = encoded_url.replace(" ", "+")
+            # Thêm padding nếu thiếu
+            encoded_url += "=" * ((-len(encoded_url)) % 4)
+            direct_url = base64.urlsafe_b64decode(encoded_url).decode('utf-8')
             
-            # Use requests to download
-            response = requests.get(direct_url, stream=True)
+            # Use requests to download with User-Agent to avoid throttling
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://www.tiktok.com/'
+            }
+            response = requests.get(direct_url, headers=headers, stream=True, timeout=30)
             response.raise_for_status()
             
             total_length = response.headers.get('content-length')
             
             # Determine extension
             ext = 'mp4' if 'video' in response.headers.get('content-type', '') else 'jpg'
-            final_file = os.path.join(download_dir, f"instagram_download.{ext}")
+            final_file = os.path.join(download_dir, f"media_download.{ext}")
             
             with open(final_file, "wb") as f:
                 if total_length is None:
@@ -131,13 +139,16 @@ def download_video_task(self, job_id: str, url: str, format_id: str, tier: str =
                 else:
                     dl = 0
                     total_length = int(total_length)
-                    for data in response.iter_content(chunk_size=4096):
+                    last_progress = 0
+                    # Chunk size 1MB để I/O đĩa nhanh hơn
+                    for data in response.iter_content(chunk_size=1024*1024):
                         dl += len(data)
                         f.write(data)
                         progress = round((dl / total_length) * 100, 2)
-                        # To avoid overwhelming Redis, only update every 5%
-                        if int(progress) % 5 == 0:
+                        # Chỉ update Redis khi tiến trình tăng ít nhất 5% để chống nghẽn cổ chai
+                        if progress - last_progress >= 5.0 or progress == 100.0:
                             publish_progress(job_id, "PROCESSING", progress, None, None)
+                            last_progress = progress
         else:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
