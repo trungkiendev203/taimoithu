@@ -11,3 +11,4 @@ redis==5.0.4
 sse-starlette==2.1.0
 curl_cffi>=0.14.0,<0.15.0
 instaloader==4.15.1
+playwright>=1.42.0

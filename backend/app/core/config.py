@@ -13,10 +13,14 @@ class Settings(BaseSettings):
 
     # yt-dlp config
     YTDLP_TIMEOUT: int = 15
+    YTDLP_COOKIES_FILE: str = ""
     
     # Docker/DB Placeholders for Phase 2/3
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/taimoithu"
     REDIS_URL: str = "redis://localhost:6379/0"
+
+    # Evil0ctal Douyin/TikTok API (Docker service default, override for local dev)
+    EVIL0CTAL_URL: str = "http://evil0ctal:80"
 
     # Phase 5 Resource Limits
     FREE_MAX_FILE_SIZE_MB: int = 10000

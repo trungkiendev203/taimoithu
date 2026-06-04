@@ -72,11 +72,12 @@ async def stream_job_events(job_id: str, request: Request):
         channel = f"job_events:{job_id}"
         pubsub.subscribe(channel)
         
+        import json
         try:
             # Gửi initial state
             state = redis_helper.get_job_state(job_id)
             if state:
-                yield {"event": "progress", "data": state}
+                yield {"event": "progress", "data": json.dumps(state)}
                 
             # Lắng nghe sự kiện mới
             while True:

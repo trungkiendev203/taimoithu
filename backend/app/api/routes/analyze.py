@@ -6,6 +6,7 @@ from app.schemas.analyze import AnalyzeResponseData
 from app.services.platform_detector import detect_platform
 from app.utils.url_validator import is_safe_url
 from app.services.ytdlp_service import extract_metadata
+from app.services.helpers import detect_referer_for_cdn
 from app.core.exceptions import AppException
 from app.core.rate_limiter import check_rate_limit_and_license
 from datetime import datetime
@@ -26,11 +27,10 @@ async def analyze_url(
     
     # 1. URL Security Validation
     if not is_safe_url(url):
-        raise AppException(
-            code="INVALID_URL",
-            message="URL không hợp lệ hoặc bị chặn vì lý do bảo mật.",
-            is_retryable=False,
-            status_code=400
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=400, 
+            content={"success": False, "message": "Invalid video URL"}
         )
     
     # 2. Platform Detection
@@ -48,6 +48,8 @@ async def analyze_url(
     try:
         data = await extract_metadata(url)
         return SuccessResponse(data=data, metadata=meta)
+    except AppException as ae:
+        raise ae
     except Exception as e:
         raise AppException(
             code="EXTRACTION_ERROR",
@@ -71,10 +73,12 @@ async def proxy_image(url: str):
             encoded += "=" * ((-len(encoded)) % 4)
             url = base64.urlsafe_b64decode(encoded).decode("utf-8")
             
+        # Detect đúng Referer dựa trên CDN domain (Douyin, TikTok, Instagram...)
+        referer = detect_referer_for_cdn(url) or "https://www.google.com/"
         async with httpx.AsyncClient() as client:
             resp = await client.get(url, headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", 
-                "Referer": "https://www.instagram.com/"
+                "Referer": referer
             })
             return Response(content=resp.content, media_type=resp.headers.get("content-type", "image/jpeg"))
     except Exception as e:

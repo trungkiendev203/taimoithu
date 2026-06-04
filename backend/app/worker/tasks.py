@@ -86,7 +86,7 @@ def download_video_task(self, job_id: str, url: str, format_id: str, tier: str =
         'logger': logger,  # Tích hợp logger của ứng dụng vào yt-dlp để thu thập log tốt hơn
     }
     
-    from app.services.ytdlp_service import get_cookies_file_path
+    from app.services.helpers import get_cookies_file_path
     cookiefile = get_cookies_file_path()
     if cookiefile:
         ydl_opts['cookiefile'] = cookiefile
@@ -108,6 +108,8 @@ def download_video_task(self, job_id: str, url: str, format_id: str, tier: str =
         if format_id.startswith('direct_url:'):
             import base64
             import requests
+            from app.services.platform_detector import detect_platform
+            from app.services.helpers import PLATFORM_REFERER_MAP
             
             publish_progress(job_id, "PROCESSING", 10.0, None, None)
             
@@ -118,10 +120,16 @@ def download_video_task(self, job_id: str, url: str, format_id: str, tier: str =
             encoded_url += "=" * ((-len(encoded_url)) % 4)
             direct_url = base64.urlsafe_b64decode(encoded_url).decode('utf-8')
             
-            # Use requests to download with User-Agent to avoid throttling
+            # Detect platform để gửi đúng Referer (Douyin CDN chặn referer sai)
+            try:
+                dl_platform = detect_platform(url)
+            except Exception:
+                dl_platform = "unknown"
+            referer = PLATFORM_REFERER_MAP.get(dl_platform, 'https://www.google.com/')
+            
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://www.tiktok.com/'
+                'Referer': referer
             }
             response = requests.get(direct_url, headers=headers, stream=True, timeout=30)
             response.raise_for_status()

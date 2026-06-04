@@ -24,7 +24,7 @@ def is_safe_url(url: str) -> bool:
         return False
         
     hostname = parsed.hostname
-    if not hostname:
+    if not hostname or "." not in hostname:
         return False
         
     # Block explicitly localhost

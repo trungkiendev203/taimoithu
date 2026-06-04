@@ -1,298 +1,42 @@
-import yt_dlp
-import asyncio
-import httpx
-import base64
-import urllib.parse
-from app.schemas.analyze import AnalyzeResponseData, FormatDTO, MediaItemDTO
-from typing import Dict, Any, List
+"""Core yt-dlp extraction and main extract_metadata router.
 
+This module handles:
+- yt-dlp based metadata extraction (YouTube, Facebook, Twitter, etc.)
+- Format normalization and resolution mapping
+- Main routing logic that delegates to platform-specific extractors
+"""
+import asyncio
+import re
+from typing import Dict, Any, List
+import yt_dlp
 from yt_dlp.networking.impersonate import ImpersonateTarget
+
+from app.schemas.analyze import AnalyzeResponseData, FormatDTO, MediaItemDTO
+from app.services.helpers import get_cookies_file_path
+from app.services.platform_detector import detect_platform
+from app.core.exceptions import AppException
+from app.core.logger import logger
 
 # Các độ phân giải chuẩn mà các nền tảng video hỗ trợ
 STANDARD_RESOLUTIONS = {2160, 1440, 1080, 720, 480, 360, 240, 144}
 
-def convert_json_to_netscape(json_path: str, netscape_path: str) -> bool:
-    import json
-    try:
-        with open(json_path, 'r', encoding='utf-8') as f:
-            cookies = json.load(f)
-        if not isinstance(cookies, list):
-            return False
-        with open(netscape_path, 'w', encoding='utf-8') as f:
-            f.write("# Netscape HTTP Cookie File\n\n")
-            for c in cookies:
-                domain = c.get('domain', '')
-                flag = "TRUE" if domain.startswith('.') else "FALSE"
-                path = c.get('path', '/')
-                secure = "TRUE" if c.get('secure', False) else "FALSE"
-                expiration = int(c.get('expirationDate', 0)) if c.get('expirationDate') is not None else 0
-                name = c.get('name', '')
-                value = c.get('value', '')
-                f.write(f"{domain}\t{flag}\t{path}\t{secure}\t{expiration}\t{name}\t{value}\n")
-        return True
-    except Exception:
-        return False
-
-def get_cookies_file_path() -> str:
-    import os
-    possible_paths = [
-        os.path.abspath("cookies.txt"),
-        os.path.abspath("backend/cookies.txt"),
-        os.path.abspath("cookies.json"),
-        os.path.abspath("backend/cookies.json"),
-    ]
-    for path in possible_paths:
-        if os.path.exists(path):
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    content = f.read(10).strip()
-                if content.startswith('['):
-                    # Convert JSON to Netscape format
-                    converted_path = os.path.join(os.path.dirname(path), "cookies_converted.txt")
-                    if convert_json_to_netscape(path, converted_path):
-                        return converted_path
-            except Exception:
-                pass
-            return path
-    return None
-
-def _extract_instagram_sync(url: str) -> AnalyzeResponseData:
-    import instaloader
-    import http.cookiejar
-    import base64
-    import re
-    
-    L = instaloader.Instaloader(quiet=True)
-    
-    cookie_path = get_cookies_file_path()
-    if cookie_path:
-        try:
-            cj = http.cookiejar.MozillaCookieJar(cookie_path)
-            cj.load()
-            L.context._session.cookies = cj
-        except Exception:
-            pass
-            
-    match = re.search(r'/(?:p|reel|tv)/([^/?#&]+)', url)
-    if not match:
-        raise Exception("Không tìm thấy mã bài đăng Instagram hợp lệ.")
-    
-    shortcode = match.group(1)
-    
-    try:
-        post = instaloader.Post.from_shortcode(L.context, shortcode)
-    except Exception as e:
-        raise Exception(f"Lỗi khi quét Instagram: {str(e)}")
-        
-    media_items = []
-    
-    def create_format(item_url: str, is_vid: bool):
-        b64_url = base64.urlsafe_b64encode(item_url.encode('utf-8')).decode('utf-8').rstrip('=')
-        format_id = f"direct_url:{b64_url}"
-        
-        if is_vid:
-            return [
-                FormatDTO(
-                    format_id=format_id,
-                    quality_label="Video (Chất lượng cao)",
-                    type="video",
-                    has_audio=True,
-                    has_video=True,
-                    video_codec="auto",
-                    audio_codec="auto",
-                    estimated_size_bytes=None
-                )
-            ]
-        else:
-            return [
-                FormatDTO(
-                    format_id=format_id,
-                    quality_label="Ảnh (Chất lượng cao)",
-                    type="image",
-                    has_audio=False,
-                    has_video=False,
-                    video_codec="none",
-                    audio_codec="none",
-                    estimated_size_bytes=None
-                )
-            ]
-
-    def get_proxied_thumb(url: str) -> str:
-        if not url: return None
-        b64_url = base64.urlsafe_b64encode(url.encode('utf-8')).decode('utf-8').rstrip('=')
-        return f"/api/v1/proxy-image?url=base64:{b64_url}"
-
-    if post.typename == 'GraphSidecar':
-        for idx, node in enumerate(post.get_sidecar_nodes()):
-            item_url = node.video_url if node.is_video else node.display_url
-            media_items.append(MediaItemDTO(
-                index=idx + 1,
-                thumbnail_url=get_proxied_thumb(node.display_url),
-                is_video=node.is_video,
-                formats=create_format(item_url, node.is_video)
-            ))
-    else:
-        item_url = post.video_url if post.is_video else post.url
-        media_items.append(MediaItemDTO(
-            index=1,
-            thumbnail_url=get_proxied_thumb(post.url),
-            is_video=post.is_video,
-            formats=create_format(item_url, post.is_video)
-        ))
-        
-    return AnalyzeResponseData(
-        title=f"Post by {post.owner_username}",
-        author_name=post.owner_username,
-        author_avatar=None,
-        thumbnail_url=get_proxied_thumb(post.url),
-        duration_seconds=None,
-        formats=[],
-        media_items=media_items
-    )
-
-async def _extract_tiktok_tikwm_async(url: str) -> AnalyzeResponseData:
-    api_url = f"https://www.tikwm.com/api/?url={urllib.parse.quote(url)}"
-    
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        try:
-            response = await client.get(api_url)
-            response.raise_for_status()
-            result = response.json()
-        except Exception as e:
-            raise Exception(f"Lỗi khi kết nối với máy chủ tải TikTok: {str(e)}")
-            
-    if result.get("code") != 0 or not result.get("data"):
-        raise Exception("Không thể trích xuất dữ liệu từ link TikTok này. Bài viết có thể bị xóa hoặc giới hạn quyền riêng tư.")
-        
-    data = result["data"]
-    title = data.get("title", "TikTok Video")
-    author = data.get("author", {}).get("nickname", "Unknown")
-    
-    media_items = []
-    
-    def get_proxied_thumb(img_url: str) -> str:
-        if not img_url: return None
-        b64_url = base64.urlsafe_b64encode(img_url.encode('utf-8')).decode('utf-8').rstrip('=')
-        return f"/api/v1/proxy-image?url=base64:{b64_url}"
-    
-    def create_direct_format(item_url: str, is_vid: bool):
-        b64_url = base64.urlsafe_b64encode(item_url.encode('utf-8')).decode('utf-8').rstrip('=')
-        format_id = f"direct_url:{b64_url}"
-        
-        if is_vid:
-            return [
-                FormatDTO(
-                    format_id=format_id,
-                    quality_label="Video (Không Logo)",
-                    type="video",
-                    has_audio=True,
-                    has_video=True,
-                    video_codec="auto",
-                    audio_codec="auto",
-                    estimated_size_bytes=None
-                )
-            ]
-        else:
-            return [
-                FormatDTO(
-                    format_id=format_id,
-                    quality_label="Ảnh (Chất lượng cao)",
-                    type="image",
-                    has_audio=False,
-                    has_video=False,
-                    video_codec="none",
-                    audio_codec="none",
-                    estimated_size_bytes=None
-                )
-            ]
-            
-    # Check if it's an image carousel
-    images = data.get("images")
-    if images and len(images) > 0:
-        for idx, img_url in enumerate(images):
-            media_items.append(MediaItemDTO(
-                index=idx + 1,
-                thumbnail_url=get_proxied_thumb(img_url),
-                is_video=False,
-                formats=create_direct_format(img_url, False)
-            ))
-        main_thumbnail = images[0]
-    else:
-        # It's a single video
-        video_url = data.get("play")
-        main_thumbnail = data.get("cover")
-        
-        if video_url:
-            media_items.append(MediaItemDTO(
-                index=1,
-                thumbnail_url=get_proxied_thumb(main_thumbnail),
-                is_video=True,
-                formats=create_direct_format(video_url, True)
-            ))
-            
-    return AnalyzeResponseData(
-        title=title,
-        author_name=author,
-        author_avatar=get_proxied_thumb(data.get("author", {}).get("avatar")),
-        thumbnail_url=get_proxied_thumb(main_thumbnail),
-        duration_seconds=data.get("duration", 0),
-        formats=[],
-        media_items=media_items
-    )
-
-
-def _extract_metadata_sync(url: str) -> Dict[str, Any]:
-    import os
-    import json
-    from app.services.platform_detector import detect_platform
-
-    try:
-        platform = detect_platform(url)
-    except Exception:
-        platform = "unknown"
-
-    ydl_opts = {
-        'quiet': True,
-        'no_warnings': True,
-        'extract_flat': False,
-        'ignore_no_formats_error': True,
-        # Cấu hình đầy đủ JavaScript runtime và giải quyết các giới hạn chặn để lấy đầy đủ độ phân giải (1080p, 720p,...)
-        'js_runtimes': {'node': {}},
-        'remote_components': ['ejs:github'],
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['default', '-tv', 'web_safari', 'web_embedded']
-            }
-        },
-    }
-    
-    # TikTok often blocks impersonated clients, so we only impersonate Chrome for YouTube/others
-    if platform != "tiktok":
-        ydl_opts['impersonate'] = ImpersonateTarget.from_str('chrome')
-    
-    cookiefile = get_cookies_file_path()
-    if cookiefile:
-        ydl_opts['cookiefile'] = cookiefile
-        
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        return ydl.extract_info(url, download=False)
 
 def _normalize_height(height: int) -> int:
     """Map raw height value to nearest standard resolution.
-    
-    YouTube/TikTok sometimes return non-standard heights like 144 or 1080.
-    This maps them to the closest standard resolution.
+
+    YouTube/TikTok sometimes return non-standard heights like 134 or 1078.
+    This maps them to the closest standard resolution within 15% tolerance.
     """
     if height <= 0:
         return 0
-    # Find the closest standard resolution
     closest = min(STANDARD_RESOLUTIONS, key=lambda r: abs(r - height))
-    # Only snap if within 15% tolerance (e.g., 134 -> 144, but 200 stays 200)
     if abs(closest - height) / closest <= 0.15:
         return closest
     return height
 
+
 def _get_thumbnail(data: Dict[str, Any]) -> str:
+    """Extract thumbnail URL from yt-dlp info dict."""
     if data.get('thumbnail'):
         return data['thumbnail']
     thumbnails = data.get('thumbnails', [])
@@ -300,11 +44,14 @@ def _get_thumbnail(data: Dict[str, Any]) -> str:
         return thumbnails[-1].get('url')
     return data.get('url')
 
-def _extract_formats_from_info(info: Dict[str, Any], is_video_post: bool = True) -> List[FormatDTO]:
+
+def _extract_formats_from_info(
+    info: Dict[str, Any], is_video_post: bool = True
+) -> List[FormatDTO]:
+    """Build FormatDTO list from yt-dlp format info."""
     resolutions = set()
     formats = []
-    
-    # Analyze video formats
+
     has_video_stream = False
     for f in info.get("formats", []):
         h = f.get("height")
@@ -313,117 +60,198 @@ def _extract_formats_from_info(info: Dict[str, Any], is_video_post: bool = True)
             has_video_stream = True
             normalized = _normalize_height(h)
             resolutions.add(normalized)
-            
-    # Add Video formats
+
+    # Video formats sorted by resolution (descending)
     for res in sorted(list(resolutions), reverse=True):
+        fmt_id = (
+            f"bestvideo[height<={res}]+bestaudio[ext=m4a]/"
+            f"bestvideo[height<={res}]+bestaudio/"
+            f"best[vcodec*=h264]/best[vcodec*=avc1]/best"
+        )
         formats.append(FormatDTO(
-            format_id=f"bestvideo[height<={res}]+bestaudio[ext=m4a]/bestvideo[height<={res}]+bestaudio/best[vcodec*=h264]/best[vcodec*=avc1]/best",
-            quality_label=f"{res}p",
-            type="video",
-            has_audio=True,
-            has_video=True,
-            video_codec="auto",
-            audio_codec="auto",
+            format_id=fmt_id, quality_label=f"{res}p",
+            type="video", has_audio=True, has_video=True,
+            video_codec="auto", audio_codec="auto",
             estimated_size_bytes=None
         ))
-        
+
     if has_video_stream or is_video_post:
-        # Add Audio only format
+        # Audio only
         formats.append(FormatDTO(
             format_id="bestaudio/best",
             quality_label="Chỉ Âm thanh (MP3)",
-            type="audio",
-            has_audio=True,
-            has_video=False,
-            video_codec="none",
-            audio_codec="auto",
+            type="audio", has_audio=True, has_video=False,
+            video_codec="none", audio_codec="auto",
             estimated_size_bytes=None
         ))
-        # Add Thumbnail format for videos
+        # Thumbnail
         formats.append(FormatDTO(
             format_id="custom_image_thumbnail",
             quality_label="Ảnh bìa",
-            type="image",
-            has_audio=False,
-            has_video=False,
-            video_codec="none",
-            audio_codec="none",
+            type="image", has_audio=False, has_video=False,
+            video_codec="none", audio_codec="none",
             estimated_size_bytes=None
         ))
     else:
-        # Pure Image post
         formats.append(FormatDTO(
             format_id="best",
             quality_label="Ảnh (Chất lượng cao)",
-            type="image",
-            has_audio=False,
-            has_video=False,
-            video_codec="none",
-            audio_codec="none",
+            type="image", has_audio=False, has_video=False,
+            video_codec="none", audio_codec="none",
             estimated_size_bytes=None
         ))
-        
+
     return formats
 
+
+def _extract_metadata_sync(url: str) -> Dict[str, Any]:
+    """Run yt-dlp extraction synchronously (for asyncio.to_thread)."""
+    logger.info(f"[EXTRACT] Bắt đầu phân tích URL gốc: {url}")
+    
+    try:
+        platform = detect_platform(url)
+    except Exception:
+        platform = "unknown"
+
+    # Normalize Douyin modal_id URLs
+    if platform == "douyin":
+        match = re.search(r'modal_id=(\d+)', url)
+        if match:
+            url = f"https://www.douyin.com/video/{match.group(1)}"
+        else:
+            note_match = re.search(r'/note/(\d+)', url)
+            if note_match:
+                url = f"https://www.douyin.com/video/{note_match.group(1)}"
+
+    class YtdlpLogger:
+        def debug(self, msg):
+            pass
+        def warning(self, msg):
+            logger.warning(f"yt-dlp warning: {msg}")
+        def error(self, msg):
+            logger.error(f"yt-dlp error: {msg}")
+
+    ydl_opts = {
+        'logger': YtdlpLogger(),
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': False,
+        'ignore_no_formats_error': True,
+        'js_runtimes': {'node': {}},
+        'remote_components': ['ejs:github'],
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['default', '-tv', 'web_safari', 'web_embedded']
+            }
+        },
+    }
+
+    # TikTok blocks impersonated clients
+    if platform != "tiktok":
+        ydl_opts['impersonate'] = ImpersonateTarget.from_str('chrome')
+
+    cookiefile = get_cookies_file_path()
+    if cookiefile:
+        ydl_opts['cookiefile'] = cookiefile
+    elif platform == "douyin":
+        try:
+            ydl_opts['cookiesfrombrowser'] = ('chrome',)
+        except Exception:
+            pass
+
+    logger.info(f"[EXTRACT] yt-dlp options (command): {ydl_opts}")
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        return ydl.extract_info(url, download=False)
+
+
 async def extract_metadata(url: str) -> AnalyzeResponseData:
+    """Main extraction router — delegates to platform-specific extractors.
+
+    Falls back to yt-dlp for unsupported or failed platform extractors.
     """
-    Run extraction in a separate thread to prevent blocking the async event loop.
-    """
-    from app.services.platform_detector import detect_platform
     try:
         platform = detect_platform(url)
     except ValueError:
         platform = "unknown"
-        
+
+    # --- Instagram ---
     if platform == "instagram":
-        return await asyncio.to_thread(_extract_instagram_sync, url)
-        
-    if platform == "tiktok":
+        from app.services.instagram_service import extract_instagram
         try:
-            return await _extract_tiktok_tikwm_async(url)
+            return await asyncio.to_thread(extract_instagram, url)
+        except Exception as e:
+            print(f"Instaloader API failed: {e}. Falling back to yt-dlp.")
+
+    # --- TikTok ---
+    if platform == "tiktok":
+        from app.services.tiktok_service import extract_tiktok_tikwm
+        try:
+            return await extract_tiktok_tikwm(url)
         except Exception as e:
             print(f"Custom TikTok API failed: {e}. Falling back to yt-dlp.")
-            pass
 
+    # --- Douyin ---
+    if platform == "douyin":
+        from app.services.douyin_service import extract_douyin_playwright
+        from app.services.evil0ctal_service import extract_evil0ctal
+        try:
+            return await extract_douyin_playwright(url)
+        except Exception as pe:
+            print(f"Playwright API failed: {pe}. Falling back to evil0ctal/yt-dlp.")
+        try:
+            return await extract_evil0ctal(url, platform)
+        except Exception as e:
+            print(f"Evil0ctal API failed: {e}. Falling back to yt-dlp.")
 
+    # --- Bilibili ---
+    if platform == "bilibili":
+        from app.services.evil0ctal_service import extract_evil0ctal
+        try:
+            return await extract_evil0ctal(url, platform)
+        except Exception as e:
+            print(f"Evil0ctal API failed: {e}. Falling back to yt-dlp.")
+
+    # --- Fallback: yt-dlp ---
     try:
         info = await asyncio.to_thread(_extract_metadata_sync, url)
-        
+
         media_items = []
         is_playlist = info.get('_type') == 'playlist'
         entries = info.get('entries', [])
-        
+
         if is_playlist and entries:
-            # Deduplicate entries (yt-dlp instagram extractor sometimes returns duplicates)
+            # Deduplicate entries
             seen = set()
             unique_entries = []
             for entry in entries:
-                # Use id and url as unique key. If url is None, fallback to title or thumbnail
-                entry_url = entry.get('url') or entry.get('thumbnail') or entry.get('title')
+                entry_url = (
+                    entry.get('url') or entry.get('thumbnail') or entry.get('title')
+                )
                 key = (entry.get('id'), entry_url)
                 if key not in seen:
                     seen.add(key)
                     unique_entries.append(entry)
-            
             entries = unique_entries
-            
+
             for idx, entry in enumerate(entries):
-                # Check if entry is video or image (vcodec handling is tricky for IG, but generally we can check duration or formats)
-                entry_is_video = entry.get('duration') is not None or any(f.get('vcodec') != 'none' for f in entry.get('formats', []))
+                entry_is_video = (
+                    entry.get('duration') is not None
+                    or any(f.get('vcodec') != 'none' for f in entry.get('formats', []))
+                )
                 entry_formats = _extract_formats_from_info(entry, is_video_post=entry_is_video)
-                
                 media_items.append(MediaItemDTO(
                     index=idx + 1,
                     thumbnail_url=_get_thumbnail(entry),
                     is_video=entry_is_video,
                     formats=entry_formats
                 ))
-                
-            # Top-level formats can be empty if it's a carousel, or we can provide a fallback
             formats = []
         else:
-            # Single item
-            is_video = info.get('duration') is not None or any(f.get('vcodec') != 'none' for f in info.get('formats', []))
+            is_video = (
+                info.get('duration') is not None
+                or any(f.get('vcodec') != 'none' for f in info.get('formats', []))
+            )
             formats = _extract_formats_from_info(info, is_video_post=is_video)
 
         return AnalyzeResponseData(
@@ -436,4 +264,32 @@ async def extract_metadata(url: str) -> AnalyzeResponseData:
             media_items=media_items
         )
     except Exception as e:
-        raise Exception(f"YT-DLP Error: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"Extraction failed for {url}: {error_msg}")
+        
+        # Parse yt-dlp/instaloader/evil0ctal specific errors
+        lower_msg = error_msg.lower()
+        
+        if "only available for registered users" in lower_msg or "private video" in lower_msg or "private" in lower_msg or "login to see" in lower_msg:
+            raise AppException("PRIVATE_CONTENT", "Video này thuộc tài khoản riêng tư hoặc yêu cầu theo dõi. Hệ thống không thể truy cập nếu không có phiên đăng nhập hợp lệ.", status_code=400)
+            
+        elif "login" in lower_msg or "sign in" in lower_msg or "authentication" in lower_msg:
+            raise AppException("LOGIN_REQUIRED", "Video này yêu cầu đăng nhập để xem.", status_code=400)
+            
+        elif "geo" in lower_msg or "country" in lower_msg or "region" in lower_msg:
+            raise AppException("GEO_BLOCKED", "Video bị giới hạn ở một số quốc gia.", status_code=400)
+            
+        elif "rate-limit" in lower_msg or "too many requests" in lower_msg or "429" in lower_msg:
+            raise AppException("RATE_LIMITED", "Hệ thống đang bị giới hạn lượt tải từ nền tảng này.", status_code=429)
+            
+        elif "unavailable" in lower_msg or "not found" in lower_msg or "404" in lower_msg or "deleted" in lower_msg:
+            raise AppException("VIDEO_UNAVAILABLE", "Video không tồn tại hoặc đã bị xóa.", status_code=404)
+            
+        elif "network" in lower_msg or "connection" in lower_msg or "timeout" in lower_msg:
+            raise AppException("NETWORK_ERROR", "Lỗi kết nối mạng khi lấy dữ liệu video.", status_code=500)
+            
+        elif "invalid url" in lower_msg or "unsupported url" in lower_msg:
+            raise AppException("INVALID_URL", "Invalid video URL", status_code=400)
+            
+        else:
+            raise AppException("UNKNOWN_ERROR", f"Đã xảy ra lỗi không xác định: {error_msg}", status_code=500)
