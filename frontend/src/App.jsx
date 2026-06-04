@@ -19,6 +19,15 @@ function App() {
   const [toastMsg, setToastMsg] = useState('');
 
   const handleAnalyze = async () => {
+    if (!url || !url.trim()) return;
+    
+    try {
+      new URL(url);
+    } catch (err) {
+      setToastMsg("Vui lòng nhập liên kết video hợp lệ.");
+      return;
+    }
+
     setAnalyzeResult(null);
     setIsLoading(true);
     setToastMsg('');

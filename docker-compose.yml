@@ -45,4 +45,10 @@ services:
       - /app/node_modules
     command: npm run dev -- --host
 
+  evil0ctal:
+    image: evil0ctal/douyin_tiktok_download_api:latest
+    ports:
+      - "8080:80"
+    restart: always
+
 
