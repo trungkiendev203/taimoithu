@@ -27,12 +27,21 @@ async def extract_evil0ctal(url: str, platform: str) -> AnalyzeResponseData:
         )
 
     data = result["data"]
+    print("EVIL0CTAL RAW DATA:", data)
     title = data.get("desc", f"{platform.capitalize()} Video")
     author = data.get("author", {}).get("nickname", "Unknown")
 
     media_items = []
 
     # Check if it's an image carousel
+    duration = 0
+    if "video" in data:
+        # duration is often in ms (e.g. 461967 -> 461.967s) or seconds. 
+        raw_duration = data["video"].get("duration", 0)
+        duration = int(raw_duration / 1000) if raw_duration > 10000 else int(raw_duration)
+    elif "video_data" in data:
+        duration = data["video_data"].get("duration", 0)
+        
     image_data = data.get("image_data", {})
     images = (
         image_data.get("no_watermark_image_list", [])
@@ -51,12 +60,25 @@ async def extract_evil0ctal(url: str, platform: str) -> AnalyzeResponseData:
         main_thumbnail = images[0]
     else:
         # Single video
-        video_data = data.get("video_data", {})
-        video_url = (
-            video_data.get("nwm_video_url_HQ")
-            or video_data.get("nwm_video_url")
-        )
-        cover_list = data.get("cover_data", {}).get("cover", {}).get("url_list", [None])
+        video_data = data.get("video", {})
+        play_addr = video_data.get("play_addr", {})
+        video_url = None
+        if play_addr and "url_list" in play_addr and len(play_addr["url_list"]) > 0:
+            video_url = play_addr["url_list"][0]
+
+        # Fallback to old format just in case
+        if not video_url:
+            old_video_data = data.get("video_data", {})
+            video_url = (
+                old_video_data.get("nwm_video_url_HQ")
+                or old_video_data.get("nwm_video_url")
+            )
+
+        cover_data = video_data.get("cover", {})
+        cover_list = cover_data.get("url_list", []) if cover_data else []
+        if not cover_list:
+            cover_list = data.get("cover_data", {}).get("cover", {}).get("url_list", [None])
+            
         main_thumbnail = cover_list[0] if cover_list else None
 
         if video_url:
@@ -67,15 +89,19 @@ async def extract_evil0ctal(url: str, platform: str) -> AnalyzeResponseData:
                 formats=create_direct_format(video_url, True)
             ))
 
-    duration_raw = data.get("video_data", {}).get("duration", 0) if data.get("video_data") else 0
-    duration_sec = duration_raw // 1000 if duration_raw else 0
+    author_avatar = None
+    author_info = data.get("author", {})
+    if isinstance(author_info, dict):
+        avatar_dict = author_info.get("avatar_thumb", {}) or author_info.get("avatar_medium", {})
+        if isinstance(avatar_dict, dict) and "url_list" in avatar_dict and avatar_dict["url_list"]:
+            author_avatar = avatar_dict["url_list"][0]
 
     return AnalyzeResponseData(
         title=title,
         author_name=author,
-        author_avatar=get_proxied_thumb(data.get("author", {}).get("avatar")),
+        author_avatar=get_proxied_thumb(author_avatar) if author_avatar else None,
         thumbnail_url=get_proxied_thumb(main_thumbnail),
-        duration_seconds=duration_sec,
+        duration_seconds=duration,
         formats=[],
         media_items=media_items
     )

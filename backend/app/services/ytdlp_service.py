@@ -220,6 +220,15 @@ async def extract_metadata(url: str) -> AnalyzeResponseData:
 
     # --- Douyin ---
     if platform == "douyin":
+        # Normalize Douyin modal_id URLs for all extractors
+        match = re.search(r'modal_id=(\d+)', url)
+        if match:
+            url = f"https://www.douyin.com/video/{match.group(1)}"
+        else:
+            note_match = re.search(r'/note/(\d+)', url)
+            if note_match:
+                url = f"https://www.douyin.com/video/{note_match.group(1)}"
+
         from app.core.config import settings
         if settings.APIFY_TOKEN:
             try:

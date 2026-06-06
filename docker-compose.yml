@@ -14,6 +14,7 @@ services:
       - ./backend/.env
     environment:
       - REDIS_URL=redis://redis:6379/0
+      - EVIL0CTAL_URL=http://evil0ctal:80
     volumes:
       - ./backend:/app
     depends_on:
@@ -28,6 +29,7 @@ services:
       - ./backend/.env
     environment:
       - REDIS_URL=redis://redis:6379/0
+      - EVIL0CTAL_URL=http://evil0ctal:80
     volumes:
       - ./backend:/app
     depends_on:
