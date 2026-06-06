@@ -9,7 +9,6 @@ import asyncio
 import re
 from typing import Dict, Any, List
 import yt_dlp
-from yt_dlp.networking.impersonate import ImpersonateTarget
 
 from app.schemas.analyze import AnalyzeResponseData, FormatDTO, MediaItemDTO
 from app.services.helpers import get_cookies_file_path
@@ -104,6 +103,60 @@ def _extract_formats_from_info(
     return formats
 
 
+def get_base_ydl_opts(platform: str) -> dict:
+    """Trả về cấu hình yt-dlp mặc định dùng cho mọi nền tảng."""
+    opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'ignore_no_formats_error': True,
+        'js_runtimes': {'node': {}},
+        'remote_components': ['ejs:github'],
+    }
+    
+    # Chỉ áp dụng cấu hình đặc biệt khi extractor thực sự yêu cầu
+    if platform == 'youtube':
+        opts['extractor_args'] = {
+            'youtube': {'player_client': ['default', '-tv', 'web_safari', 'web_embedded']}
+        }
+        opts['noplaylist'] = True
+    elif platform == 'douyin':
+        pass
+        
+    return opts
+
+def execute_with_fallback(url: str, platform: str, base_opts: dict, download: bool = False) -> tuple[Dict[str, Any], str | None]:
+    """Execute yt-dlp extraction with fallback strategies:
+    1. Lần 1: Cấu hình chuẩn
+    2. Lần 2: Retry với cookies nếu có
+    """
+    cookiefile = get_cookies_file_path()
+    strategies = []
+    
+    # Lần 1: Cấu hình chuẩn
+    opts_1 = dict(base_opts)
+    strategies.append(opts_1)
+    
+    # Lần 2: Retry với cookies nếu có
+    if cookiefile:
+        opts_2 = dict(base_opts)
+        opts_2['cookiefile'] = cookiefile
+        strategies.append(opts_2)
+        
+    last_error = None
+    for idx, opts in enumerate(strategies):
+        logger.info(f"[YTDLP] Attempt {idx + 1} with opts: {opts}")
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(url, download=download)
+                final_file = ydl.prepare_filename(info) if download else None
+                return info, final_file
+        except Exception as e:
+            last_error = e
+            logger.warning(f"[YTDLP] Attempt {idx + 1} failed: {str(e)}")
+            continue
+            
+    raise last_error
+
 def _extract_metadata_sync(url: str) -> Dict[str, Any]:
     """Run yt-dlp extraction synchronously (for asyncio.to_thread)."""
     logger.info(f"[EXTRACT] Bắt đầu phân tích URL gốc: {url}")
@@ -131,38 +184,12 @@ def _extract_metadata_sync(url: str) -> Dict[str, Any]:
         def error(self, msg):
             logger.error(f"yt-dlp error: {msg}")
 
-    ydl_opts = {
-        'logger': YtdlpLogger(),
-        'quiet': True,
-        'no_warnings': True,
-        'extract_flat': False,
-        'ignore_no_formats_error': True,
-        'js_runtimes': {'node': {}},
-        'remote_components': ['ejs:github'],
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['default', '-tv', 'web_safari', 'web_embedded']
-            }
-        },
-    }
-
-    # TikTok blocks impersonated clients
-    if platform != "tiktok":
-        ydl_opts['impersonate'] = ImpersonateTarget.from_str('chrome')
-
-    cookiefile = get_cookies_file_path()
-    if cookiefile:
-        ydl_opts['cookiefile'] = cookiefile
-    elif platform == "douyin":
-        try:
-            ydl_opts['cookiesfrombrowser'] = ('chrome',)
-        except Exception:
-            pass
-
-    logger.info(f"[EXTRACT] yt-dlp options (command): {ydl_opts}")
-
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        return ydl.extract_info(url, download=False)
+    base_opts = get_base_ydl_opts(platform)
+    base_opts['logger'] = YtdlpLogger()
+    base_opts['extract_flat'] = False
+    
+    info, _ = execute_with_fallback(url, platform, base_opts, download=False)
+    return info
 
 
 async def extract_metadata(url: str) -> AnalyzeResponseData:
@@ -177,37 +204,44 @@ async def extract_metadata(url: str) -> AnalyzeResponseData:
 
     # --- Instagram ---
     if platform == "instagram":
-        from app.services.instagram_service import extract_instagram
         try:
+            from app.services.instagram_service import extract_instagram
             return await asyncio.to_thread(extract_instagram, url)
         except Exception as e:
             print(f"Instaloader API failed: {e}. Falling back to yt-dlp.")
 
     # --- TikTok ---
     if platform == "tiktok":
-        from app.services.tiktok_service import extract_tiktok_tikwm
         try:
+            from app.services.tiktok_service import extract_tiktok_tikwm
             return await extract_tiktok_tikwm(url)
         except Exception as e:
             print(f"Custom TikTok API failed: {e}. Falling back to yt-dlp.")
 
     # --- Douyin ---
     if platform == "douyin":
-        from app.services.douyin_service import extract_douyin_playwright
-        from app.services.evil0ctal_service import extract_evil0ctal
+        from app.core.config import settings
+        if settings.APIFY_TOKEN:
+            try:
+                from app.services.apify_service import extract_douyin_apify
+                return await extract_douyin_apify(url)
+            except Exception as e:
+                print(f"Apify API failed: {e}. Falling back to Evil0ctal.")
         try:
+            from app.services.evil0ctal_service import extract_evil0ctal
+            return await extract_evil0ctal(url, platform)
+        except Exception as ee:
+            print(f"Evil0ctal API failed: {ee}. Falling back to Playwright.")
+        try:
+            from app.services.douyin_service import extract_douyin_playwright
             return await extract_douyin_playwright(url)
         except Exception as pe:
-            print(f"Playwright API failed: {pe}. Falling back to evil0ctal/yt-dlp.")
-        try:
-            return await extract_evil0ctal(url, platform)
-        except Exception as e:
-            print(f"Evil0ctal API failed: {e}. Falling back to yt-dlp.")
+            print(f"Playwright API failed: {pe}. Falling back to yt-dlp.")
 
     # --- Bilibili ---
     if platform == "bilibili":
-        from app.services.evil0ctal_service import extract_evil0ctal
         try:
+            from app.services.evil0ctal_service import extract_evil0ctal
             return await extract_evil0ctal(url, platform)
         except Exception as e:
             print(f"Evil0ctal API failed: {e}. Falling back to yt-dlp.")

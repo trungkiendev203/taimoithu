@@ -20,8 +20,6 @@ def publish_progress(job_id: str, status: str, progress: float, speed: float = N
     
     redis_helper.set_job_state(job_id, state)
     redis_helper.publish_job_event(job_id, state)
-
-from yt_dlp.networking.impersonate import ImpersonateTarget
 import time
 from app.core.config import settings
 
@@ -65,41 +63,32 @@ def download_video_task(self, job_id: str, url: str, format_id: str, tier: str =
         elif d['status'] == 'finished':
             publish_progress(job_id, "PROCESSING", 100.0) # merging
 
-    ydl_opts = {
+    try:
+        from app.services.platform_detector import detect_platform
+        dl_platform = detect_platform(url)
+    except Exception:
+        dl_platform = "unknown"
+
+    from app.services.ytdlp_service import get_base_ydl_opts, execute_with_fallback
+
+    base_opts = get_base_ydl_opts(dl_platform)
+    base_opts.update({
         'format': format_id,
         'outtmpl': output_template,
         'progress_hooks': [progress_hook],
-        'quiet': True,
-        'no_warnings': True,
-        'ignore_no_formats_error': True,
         'merge_output_format': 'mp4',
         'concurrent_fragment_downloads': 5,
-        'impersonate': ImpersonateTarget.from_str('chrome'),
-        # Cấu hình đầy đủ JavaScript runtime và giải quyết các giới hạn chặn để tải đầy đủ độ phân giải (1080p, 720p,...)
-        'js_runtimes': {'node': {}},
-        'remote_components': ['ejs:github'],
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['default', '-tv', 'web_safari', 'web_embedded']
-            }
-        },
-        'logger': logger,  # Tích hợp logger của ứng dụng vào yt-dlp để thu thập log tốt hơn
-    }
-    
-    from app.services.helpers import get_cookies_file_path
-    cookiefile = get_cookies_file_path()
-    if cookiefile:
-        ydl_opts['cookiefile'] = cookiefile
-    
+        'logger': logger,
+    })
+
     if item_index is not None:
-        ydl_opts['playlist_items'] = str(item_index)
+        base_opts['playlist_items'] = str(item_index)
         
     is_custom_thumbnail = (format_id == 'custom_image_thumbnail')
     if is_custom_thumbnail:
-        ydl_opts['skip_download'] = True
-        ydl_opts['writethumbnail'] = True
-        # Set format back to a valid one so yt-dlp doesn't fail parsing format string
-        ydl_opts['format'] = 'best'
+        base_opts['skip_download'] = True
+        base_opts['writethumbnail'] = True
+        base_opts['format'] = 'best'
         
     final_file = None
     try:
@@ -158,13 +147,10 @@ def download_video_task(self, job_id: str, url: str, format_id: str, tier: str =
                             publish_progress(job_id, "PROCESSING", progress, None, None)
                             last_progress = progress
         else:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                # Tên file thực tế sau khi tải (có thể đổi đuôi mkv/mp4)
-                final_file = ydl.prepare_filename(info)
-                if ydl_opts.get('merge_output_format'):
-                    base, _ = os.path.splitext(final_file)
-                    final_file = f"{base}.{ydl_opts['merge_output_format']}"
+            info, final_file = execute_with_fallback(url, dl_platform, base_opts, download=True)
+            if base_opts.get('merge_output_format') and final_file:
+                base, _ = os.path.splitext(final_file)
+                final_file = f"{base}.{base_opts['merge_output_format']}"
 
         if is_custom_thumbnail:
             # yt-dlp writes thumbnail with various extensions (.jpg, .webp). We must find it in the dir.

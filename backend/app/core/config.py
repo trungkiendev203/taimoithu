@@ -20,7 +20,9 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Evil0ctal Douyin/TikTok API (Docker service default, override for local dev)
+    TIKWM_DOMAIN: str = "tikwm.com"
     EVIL0CTAL_URL: str = "http://evil0ctal:80"
+    APIFY_TOKEN: str | None = None
 
     # Phase 5 Resource Limits
     FREE_MAX_FILE_SIZE_MB: int = 10000

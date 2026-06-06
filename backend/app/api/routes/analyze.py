@@ -75,12 +75,13 @@ async def proxy_image(url: str):
             
         # Detect đúng Referer dựa trên CDN domain (Douyin, TikTok, Instagram...)
         referer = detect_referer_for_cdn(url) or "https://www.google.com/"
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.get(url, headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", 
                 "Referer": referer
             })
+            resp.raise_for_status()
             return Response(content=resp.content, media_type=resp.headers.get("content-type", "image/jpeg"))
     except Exception as e:
-        print(f"Proxy Image Error: {str(e)} - Source URL: {url}")
-        return Response(content=f"Proxy error: {str(e)}", status_code=400)
+        print(f"Proxy Image Error: {type(e).__name__} - {str(e)} - Source URL: {url}")
+        return Response(content=f"Proxy error: {type(e).__name__} - {str(e)}", status_code=400)
