@@ -65,20 +65,20 @@ def convert_json_to_netscape(json_path: str, netscape_path: str) -> bool:
         return False
 
 
-def get_cookies_file_path(return_json: bool = False) -> Optional[str]:
+def get_cookies_file_path(return_json: bool = False, prefix: str = "cookies") -> Optional[str]:
     """Find and return the path to a valid cookies file.
 
     Searches relative to CWD. Auto-converts JSON to Netscape if needed.
     """
     possible_paths = []
-    if settings.YTDLP_COOKIES_FILE:
+    if prefix == "cookies" and settings.YTDLP_COOKIES_FILE:
         possible_paths.append(os.path.abspath(settings.YTDLP_COOKIES_FILE))
         
     possible_paths.extend([
-        os.path.abspath("cookies.txt"),
-        os.path.abspath("backend/cookies.txt"),
-        os.path.abspath("cookies.json"),
-        os.path.abspath("backend/cookies.json"),
+        os.path.abspath(f"{prefix}.txt"),
+        os.path.abspath(f"backend/{prefix}.txt"),
+        os.path.abspath(f"{prefix}.json"),
+        os.path.abspath(f"backend/{prefix}.json"),
     ])
     for path in possible_paths:
         if os.path.exists(path):
@@ -88,12 +88,13 @@ def get_cookies_file_path(return_json: bool = False) -> Optional[str]:
                 if content.startswith('['):
                     if return_json:
                         return path
-                    converted = os.path.join(os.path.dirname(path), "cookies_converted.txt")
+                    converted = os.path.join(os.path.dirname(path), f"{prefix}_converted.txt")
                     if convert_json_to_netscape(path, converted):
                         return converted
             except Exception:
                 pass
             return path
+            
     return None
 
 
@@ -146,6 +147,8 @@ def detect_referer_for_cdn(cdn_url: str) -> str:
         return "https://www.instagram.com/"
     if any(d in lower for d in ['youtube', 'googlevideo', 'ytimg']):
         return "https://www.youtube.com/"
+    if any(d in lower for d in ['bilivideo', 'hdslb', 'bilibili']):
+        return "https://www.bilibili.com/"
     return ""
 
 

@@ -147,10 +147,15 @@ def download_video_task(self, job_id: str, url: str, format_id: str, tier: str =
                             publish_progress(job_id, "PROCESSING", progress, None, None)
                             last_progress = progress
         else:
-            info, final_file = execute_with_fallback(url, dl_platform, base_opts, download=True)
-            if base_opts.get('merge_output_format') and final_file:
-                base, _ = os.path.splitext(final_file)
-                final_file = f"{base}.{base_opts['merge_output_format']}"
+            if dl_platform == "soundcloud":
+                from app.services.soundcloud_service import download_soundcloud
+                final_file = os.path.join(download_dir, f"{job_id}.mp3")
+                download_soundcloud(url, final_file)
+            else:
+                info, final_file = execute_with_fallback(url, dl_platform, base_opts, download=True)
+                if base_opts.get('merge_output_format') and final_file:
+                    base, _ = os.path.splitext(final_file)
+                    final_file = f"{base}.{base_opts['merge_output_format']}"
 
         if is_custom_thumbnail:
             # yt-dlp writes thumbnail with various extensions (.jpg, .webp). We must find it in the dir.

@@ -96,6 +96,9 @@ async def extract_evil0ctal(url: str, platform: str) -> AnalyzeResponseData:
         if isinstance(avatar_dict, dict) and "url_list" in avatar_dict and avatar_dict["url_list"]:
             author_avatar = avatar_dict["url_list"][0]
 
+    if not media_items:
+        raise Exception("Không tìm thấy media (video/ảnh) trong phản hồi của Evil0ctal.")
+
     return AnalyzeResponseData(
         title=title,
         author_name=author,

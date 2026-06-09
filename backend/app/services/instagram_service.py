@@ -11,7 +11,7 @@ def extract_instagram(url: str) -> AnalyzeResponseData:
     """Extract Instagram post metadata (sync, run via asyncio.to_thread)."""
     L = instaloader.Instaloader(quiet=True)
 
-    cookie_path = get_cookies_file_path()
+    cookie_path = get_cookies_file_path(prefix="ig_cookies")
     if cookie_path:
         try:
             cj = http.cookiejar.MozillaCookieJar(cookie_path)

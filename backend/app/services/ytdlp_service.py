@@ -11,7 +11,7 @@ from typing import Dict, Any, List
 import yt_dlp
 
 from app.schemas.analyze import AnalyzeResponseData, FormatDTO, MediaItemDTO
-from app.services.helpers import get_cookies_file_path
+from app.services.helpers import get_cookies_file_path, get_proxied_thumb
 from app.services.platform_detector import detect_platform
 from app.core.exceptions import AppException
 from app.core.logger import logger
@@ -113,7 +113,6 @@ def get_base_ydl_opts(platform: str) -> dict:
         'remote_components': ['ejs:github'],
     }
     
-    # Chỉ áp dụng cấu hình đặc biệt khi extractor thực sự yêu cầu
     if platform == 'youtube':
         opts['extractor_args'] = {
             'youtube': {'player_client': ['default', '-tv', 'web_safari', 'web_embedded']}
@@ -121,6 +120,13 @@ def get_base_ydl_opts(platform: str) -> dict:
         opts['noplaylist'] = True
     elif platform == 'douyin':
         pass
+    elif platform == 'bilibili':
+        opts['http_headers'] = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://www.bilibili.com/',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5'
+        }
         
     return opts
 
@@ -134,13 +140,21 @@ def execute_with_fallback(url: str, platform: str, base_opts: dict, download: bo
     
     # Lần 1: Cấu hình chuẩn
     opts_1 = dict(base_opts)
-    strategies.append(opts_1)
     
     # Lần 2: Retry với cookies nếu có
     if cookiefile:
         opts_2 = dict(base_opts)
         opts_2['cookiefile'] = cookiefile
-        strategies.append(opts_2)
+        
+        if platform == 'bilibili':
+            # Bilibili: Ưu tiên dùng cookie để lấy chất lượng cao
+            strategies.append(opts_2)
+            strategies.append(opts_1)
+        else:
+            strategies.append(opts_1)
+            strategies.append(opts_2)
+    else:
+        strategies.append(opts_1)
         
     last_error = None
     for idx, opts in enumerate(strategies):
@@ -255,6 +269,14 @@ async def extract_metadata(url: str) -> AnalyzeResponseData:
         except Exception as e:
             print(f"Evil0ctal API failed: {e}. Falling back to yt-dlp.")
 
+    # --- SoundCloud ---
+    if platform == "soundcloud":
+        try:
+            from app.services.soundcloud_service import extract_soundcloud
+            return await extract_soundcloud(url)
+        except Exception as e:
+            print(f"SoundCloud extraction failed: {e}. Falling back to yt-dlp.")
+
     # --- Fallback: yt-dlp ---
     try:
         info = await asyncio.to_thread(_extract_metadata_sync, url)
@@ -285,7 +307,7 @@ async def extract_metadata(url: str) -> AnalyzeResponseData:
                 entry_formats = _extract_formats_from_info(entry, is_video_post=entry_is_video)
                 media_items.append(MediaItemDTO(
                     index=idx + 1,
-                    thumbnail_url=_get_thumbnail(entry),
+                    thumbnail_url=get_proxied_thumb(_get_thumbnail(entry)),
                     is_video=entry_is_video,
                     formats=entry_formats
                 ))
@@ -297,12 +319,15 @@ async def extract_metadata(url: str) -> AnalyzeResponseData:
             )
             formats = _extract_formats_from_info(info, is_video_post=is_video)
 
+        raw_dur = info.get("duration")
+        duration_sec = int(float(raw_dur)) if raw_dur is not None else None
+
         return AnalyzeResponseData(
             title=info.get("title", "Unknown Title"),
             author_name=info.get("uploader"),
             author_avatar=None,
-            thumbnail_url=_get_thumbnail(info),
-            duration_seconds=info.get("duration"),
+            thumbnail_url=get_proxied_thumb(_get_thumbnail(info)),
+            duration_seconds=duration_sec,
             formats=formats,
             media_items=media_items
         )

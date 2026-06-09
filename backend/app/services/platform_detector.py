@@ -3,10 +3,11 @@ from urllib.parse import urlparse
 SUPPORTED_DOMAINS = [
     "youtube.com", "youtu.be",
     "tiktok.com", "douyin.com", "iesdouyin.com",
-    "bilibili.com",
+    "bilibili.com", "bilibili.tv",
     "facebook.com", "fb.watch", "fb.com",
     "instagram.com",
-    "twitter.com", "x.com"
+    "twitter.com", "x.com",
+    "soundcloud.com", "on.soundcloud.com"
 ]
 
 def detect_platform(url: str) -> str:
@@ -36,5 +37,7 @@ def detect_platform(url: str) -> str:
                 return "instagram"
             if "twitter" in domain or "x.com" in domain:
                 return "twitter"
+            if "soundcloud" in domain:
+                return "soundcloud"
                 
     raise ValueError("UNSUPPORTED_PLATFORM")

@@ -48,19 +48,36 @@ async def startup_event():
     import asyncio
     from app.utils.cleanup import cleanup_old_files
     from app.core.logger import logger
+    from app.services.telegram_bot import start_telegram_bot_thread, check_cookie_periodic
     
-    async def cleanup_loop():
-        # Dọn dẹp thư mục downloads định kỳ mỗi 10 phút
+    # Khởi động Telegram Bot
+    start_telegram_bot_thread()
+    
+    async def background_tasks_loop():
+        # Lần đầu chờ 10s
         await asyncio.sleep(10)
+        
+        # Biến đếm để chạy check_cookie_periodic mỗi 1 tiếng (3600s / 600s = 6 lần cleanup loop)
+        loop_count = 0
+        
         while True:
             try:
                 cleanup_old_files(900)  # Xóa folder cũ hơn 15 phút
             except Exception as e:
                 logger.error(f"Error in background cleanup loop: {e}")
+                
+            try:
+                # Mỗi 1 tiếng chạy check cookie một lần
+                if loop_count % 6 == 0:
+                    await asyncio.to_thread(check_cookie_periodic)
+            except Exception as e:
+                logger.error(f"Error checking cookie periodic: {e}")
+                
+            loop_count += 1
             await asyncio.sleep(600)  # Chạy lại sau 10 phút
             
-    asyncio.create_task(cleanup_loop())
-    logger.info("Background cleanup loop initialized.")
+    asyncio.create_task(background_tasks_loop())
+    logger.info("Background tasks loop initialized.")
 
 @app.get("/", tags=["root"])
 def root():

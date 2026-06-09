@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/taimoithu"
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Telegram Bot
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_ADMIN_ID: str = ""
+
     # Evil0ctal Douyin/TikTok API (Docker service default, override for local dev)
     TIKWM_DOMAIN: str = "tikwm.com"
     EVIL0CTAL_URL: str = "http://evil0ctal:80"

@@ -27,10 +27,11 @@ async def analyze_url(
     
     # 1. URL Security Validation
     if not is_safe_url(url):
-        from fastapi.responses import JSONResponse
-        return JSONResponse(
-            status_code=400, 
-            content={"success": False, "message": "Invalid video URL"}
+        raise AppException(
+            code="INVALID_URL",
+            message="Invalid video URL",
+            is_retryable=False,
+            status_code=400
         )
     
     # 2. Platform Detection
