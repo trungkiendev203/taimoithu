@@ -105,6 +105,10 @@ Giao diện áp dụng hệ thống thiết kế **Pinterest Design System [DESI
 
 ## 8. Vận Hành & Bảo Trì (Operations) [PRD-OPS]
 
+- **Hệ Thống Quản Lý Cookie Qua Telegram (Cookie Manager Bot):**
+  - **Tự động hóa cập nhật:** Cho phép admin kéo thả file cookie (.txt hoặc .json) thẳng vào Telegram Bot để cập nhật. Tự động nhận diện nền tảng (Bilibili qua `SESSDATA`, Instagram qua `sessionid`), tự động convert JSON sang chuẩn Netscape.
+  - **Giám sát & Cảnh báo (Health Check):** Thiết lập background worker tự động kiểm tra sức khỏe cookie mỗi 60 phút. Gửi cảnh báo Telegram ngay lập tức nếu chất lượng tải Bilibili rớt xuống dưới 720p hoặc IG Session hết hạn.
+  - **Đảm bảo an toàn (Fail-safe):** Luôn cô lập file cookie của từng nền tảng (`ig_cookies.txt` và `cookies.txt`). Tự động validate bằng thư viện `MozillaCookieJar` trước khi lưu thực (Atomic update). Hỗ trợ tính năng backup nội bộ và các lệnh khôi phục (`/rollback_cookie`, `/rollback_ig_cookie`).
 - **Cập nhật yt-dlp tự động:** Thiết lập Cron Job chạy mỗi 12h. Tự động kiểm tra bản phát hành mới của yt-dlp, cài đặt vào môi trường staging, chạy test script (5 URL của 5 platform Tier 1). Nếu Pass, tự động promote lên Production.
 - **Platform Health Monitoring:** Chạy script check trạng thái API nền tảng mỗi 30 phút. Hiển thị thông báo (Badge: Green/Red) trên UI Frontend nếu một nền tảng cụ thể đang bảo trì/thay đổi thuật toán.
 - **Error Tracking:** Cài đặt Sentry để bắt exception từ FastAPI backend.

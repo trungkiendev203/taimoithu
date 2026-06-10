@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
-from app.api.routes import health, analyze, download, monitor
+from app.api.routes import health, analyze, download, monitor, batch
 from app.core.exceptions import (
     AppException, 
     app_exception_handler, 
@@ -25,6 +25,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 # Exception Handlers
@@ -42,6 +43,7 @@ app.include_router(health.router, prefix=settings.API_V1_STR, tags=["health"])
 app.include_router(analyze.router, prefix=settings.API_V1_STR, tags=["analyze"])
 app.include_router(download.router, prefix=f"{settings.API_V1_STR}/download", tags=["download"])
 app.include_router(monitor.router, prefix=settings.API_V1_STR, tags=["monitor"])
+app.include_router(batch.router, prefix=f"{settings.API_V1_STR}/batch", tags=["batch"])
 
 @app.on_event("startup")
 async def startup_event():

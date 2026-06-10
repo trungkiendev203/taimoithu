@@ -16,8 +16,6 @@ www.bilibili.tv	FALSE	/	FALSE	1794224552	g_state	{"i_l":0,"i_ll":1778672552550,"
 .bilibili.com	TRUE	/	FALSE	1815393905	buvid_fp	3af2601583a47aa841a0d911d356471d
 .bilibili.com	TRUE	/	FALSE	1812468315	home_feed_column	5
 .bilibili.com	TRUE	/	FALSE	1812468315	browser_resolution	1536-695
-.bilibili.com	TRUE	/	FALSE	1781093108	bili_ticket	eyJhbGciOiJIUzI1NiIsImtpZCI6InMwMyIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODEwOTMxMDgsImlhdCI6MTc4MDgzMzg0OCwicGx0IjotMX0.A4OFI-eKDnQI7bGqfMAWm-bF4rVHwsuD_a_19q8HJZs
-.bilibili.com	TRUE	/	FALSE	1781093108	bili_ticket_expires	1781093048
 .bilibili.com	TRUE	/	FALSE	1783425908	buvid4	08D780FD-84FF-263D-E92E-EBC5C4AB576G07933-026060720-QJgxwPb5lEzKjCLBRjKY3g%3D%3D
 .bilibili.com	TRUE	/	FALSE	1812369909	CURRENT_QUALITY	0
 .bilibili.com	TRUE	/	FALSE	1815393911	rpdid	|(m)lkmRuR|0J'u~)|)JJmuu
@@ -33,3 +31,10 @@ www.bilibili.tv	FALSE	/	FALSE	1794224552	g_state	{"i_l":0,"i_ll":1778672552550,"
 www.bilibili.com	FALSE	/	FALSE	0	bmg_af_switch	1
 www.bilibili.com	FALSE	/	FALSE	0	bmg_src_def_domain	i1.hdslb.com
 www.bilibili.com	FALSE	/	FALSE	0	bmg_af_sc	{"none":{"on":1,"def":"i1.hdslb.com"},"sgp":{"on":1,"def":"i1-sgp.hdslb.com"}}
+.youtube.com	TRUE	/	FALSE	0	PREF	hl=en&tz=UTC
+.youtube.com	TRUE	/	TRUE	0	SOCS	CAI
+.youtube.com	TRUE	/	TRUE	1796584061	__Secure-YNID	19.YT=nfyMJCG0DSGlTyVMLXAgRyge0FGxNaYLIFP3bVwS2JCv6QNrOlH1Z8-3GD7d8S5PbW0mAJyHMxiJ0OI8aT1ehmP_0fw6_kXpgigN7UckkaQlUblGENittjA9H2_UIFSQqerbC3InVSiQFaVAmogTggPNJnvQhrjLAtTjJsc-mIfs4evjCQruP8K2xE25PwQAYPl9wsSFlHW0C-cwosOjbg7phqVwlwfXead3T8eHfPJz76b_snqLy-YtOkl_q9mtDXUTO0OATSY_25DJScy8hWtUUlTK7GofYcTS1IpmiOAktU3aqusKU_cp0CLgZjqVJgvQVohi085svQKTaHE0jg
+.youtube.com	TRUE	/	TRUE	0	YSC	0AEQAInkILQ
+.youtube.com	TRUE	/	TRUE	1796584061	__Secure-ROLLOUT_TOKEN	CJ3Am7KX24O1XxCC3tq67fqUAxjLsvC67fqUAw%3D%3D
+.youtube.com	TRUE	/	TRUE	1796620881	VISITOR_INFO1_LIVE	VoOZj2Vj8VI
+.youtube.com	TRUE	/	TRUE	1796620881	VISITOR_PRIVACY_METADATA	CgJWThIEGgAgPQ%3D%3D

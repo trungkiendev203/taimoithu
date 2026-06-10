@@ -60,6 +60,7 @@ function App() {
           setUrl={setUrl} 
           handleAnalyze={handleAnalyze} 
           isLoading={isLoading} 
+          setToastMsg={setToastMsg}
         />
         
         {analyzeResult && (
