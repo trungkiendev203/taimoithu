@@ -7,7 +7,9 @@ TEST_URLS = {
     "TikTok": "https://www.tiktok.com/@tiktok/video/7106594312292453675",
     "Douyin": "https://www.douyin.com/video/7331575796245843236",
     "Instagram": "https://www.instagram.com/p/C-X-oWzO_",
-    "Facebook": "https://www.facebook.com/zuck/videos/10115042467571321",
+    "FB_Public": "https://www.facebook.com/facebook/videos/10153231379946729/",
+    "FB_Watch": "https://fb.watch/rmX82fO-1S/",
+    "FB_Private": "https://www.facebook.com/1234567890/videos/0987654321/",
     "YouTube": "https://www.youtube.com/watch?v=jNQXAC9IVRw",
     "Bilibili": "https://www.bilibili.com/video/BV1xx411c7mD"
 }

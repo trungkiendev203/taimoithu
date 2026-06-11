@@ -261,6 +261,11 @@ async def extract_metadata(url: str) -> AnalyzeResponseData:
         except Exception as pe:
             print(f"Playwright API failed: {pe}. Falling back to yt-dlp.")
 
+    # --- Facebook ---
+    if platform == "facebook":
+        from app.services.facebook_service import extract_facebook
+        return await extract_facebook(url)
+
     # --- Bilibili ---
     if platform == "bilibili":
         try:
