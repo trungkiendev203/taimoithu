@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://taimoithu.com/sitemap.xml

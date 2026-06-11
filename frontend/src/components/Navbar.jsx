@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const Navbar = () => {
+const Navbar = ({ activeView, navigateTo }) => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
 
   useEffect(() => {
@@ -21,6 +21,28 @@ const Navbar = () => {
           </svg>
           <span>Tải Mọi Thứ</span>
         </div>
+        
+        <div className="navbar-center-menu">
+          <button 
+            className={`nav-menu-btn ${activeView === 'downloader' ? 'active' : ''}`}
+            onClick={() => navigateTo('downloader', '/')}
+          >
+            Công cụ tải video
+          </button>
+          <button 
+            className={`nav-menu-btn ${activeView === 'webdesign' ? 'active' : ''}`}
+            onClick={() => navigateTo('webdesign', '/nhan-tao-website')}
+          >
+            Nhận tạo website
+          </button>
+          <button 
+            className={`nav-menu-btn ${activeView === 'thpt' ? 'active' : ''}`}
+            onClick={() => navigateTo('thpt', '/tra-cuu-diem-thi')}
+          >
+            Tra cứu điểm thi
+          </button>
+        </div>
+
         <div className="navbar-actions">
           <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle Dark Mode">
             {theme === 'light' ? '🌙' : '☀️'}

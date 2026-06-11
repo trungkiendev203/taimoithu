@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import UrlInput from './UrlInput';
 import BatchDownload from './BatchDownload';
 
-const HeroSection = ({ url, setUrl, handleAnalyze, isLoading, setToastMsg }) => {
+const HeroSection = ({ url, setUrl, handleAnalyze, isLoading, setToastMsg, isActive }) => {
   const [activeTab, setActiveTab] = useState('single'); // 'single' or 'batch'
+
+  const TitleTag = isActive ? 'h1' : 'div';
 
   return (
     <section className="hero-section section-padding">
       <div className="container hero-container">
-        <h1 className="hero-title">Tải video chất lượng cao từ <span>mọi nền tảng</span></h1>
+        <TitleTag className="hero-title">Tải video chất lượng cao từ <span>mọi nền tảng</span></TitleTag>
         <p className="hero-subtitle">
           Công cụ tải video trực tuyến miễn phí tốt nhất. Hỗ trợ 1080p, 4K, tải âm thanh gốc không giảm chất lượng từ YouTube, TikTok, Facebook và hơn thế nữa.
         </p>

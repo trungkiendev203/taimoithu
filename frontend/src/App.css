@@ -26,17 +26,29 @@
 /* --- Navbar --- */
 .navbar {
   position: sticky;
-  top: 0;
-  background-color: var(--color-bg);
-  box-shadow: var(--shadow-sm);
+  top: 16px;
   z-index: 50;
-  padding: 16px 0;
+  padding: 0;
+  margin-bottom: 32px;
 }
 
 .navbar-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 12px 24px;
+  border-radius: 999px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0,0,0,0.04);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+[data-theme="dark"] .navbar-container {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0,0,0,0.2);
 }
 
 .navbar-logo {
@@ -936,3 +948,48 @@
 .mt-4 {
   margin-top: 16px;
 }
+
+/* --- VIEW TOGGLING --- */
+.hidden-view {
+  display: none !important;
+}
+
+/* --- NAVBAR UPDATES (Linear/Vercel style) --- */
+.navbar-center-menu {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.nav-menu-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 500;
+  color: var(--color-text-light);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.nav-menu-btn:hover {
+  background: rgba(100, 100, 100, 0.05);
+  color: var(--color-text);
+}
+
+.nav-menu-btn.active {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .nav-menu-btn.active {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* --- WEB DESIGN LANDING --- moved to WebDesignLanding.css */
