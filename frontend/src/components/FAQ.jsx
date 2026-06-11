@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const FAQ = () => {
+const FAQ = ({ isActive = true }) => {
   const faqs = [
     {
       question: "Tải Mọi Thứ có an toàn và bảo mật không?",
@@ -54,7 +54,9 @@ const FAQ = () => {
           ))}
         </div>
       </div>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      {isActive && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
     </section>
   );
 };

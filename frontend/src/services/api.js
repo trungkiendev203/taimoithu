@@ -29,5 +29,18 @@ export const api = {
 
   getDownloadFileUrl: (job_id) => {
     return `${API_BASE}/download/${job_id}/file`;
+  },
+
+  submitFeedback: async (feedbackData) => {
+    const res = await fetch(`${API_BASE}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(feedbackData)
+    });
+    const data = await res.json();
+    if (!res.ok || data.status === 'error') {
+      throw new Error(data?.error?.message || 'Không thể gửi góp ý lúc này. Vui lòng thử lại sau.');
+    }
+    return data.data;
   }
 };

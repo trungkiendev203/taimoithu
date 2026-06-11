@@ -990,9 +990,249 @@
 [data-theme="dark"] .nav-menu-btn.active {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  text-decoration: none;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 500;
+  color: var(--color-text-light);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.nav-menu-btn:hover {
+  background: rgba(100, 100, 100, 0.05);
+  color: var(--color-text);
+}
+
+.nav-menu-btn.active {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .nav-menu-btn.active {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 /* --- WEB DESIGN LANDING --- moved to WebDesignLanding.css */
 
 .link-group .footer-link-dummy { display: block; color: var(--color-text-light); margin-bottom: 8px; cursor: default; opacity: 0.7; }
+
+/* --- FEEDBACK MODAL --- */
+.feedback-btn {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.feedback-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.3);
+}
+
+.feedback-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.feedback-modal-solid {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px;
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0,0,0,0.05);
+  animation: slideUpScale 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpScale {
+  0% { opacity: 0; transform: translateY(20px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.feedback-close-btn-solid {
+  position: absolute;
+  top: 24px; right: 24px;
+  background: #f8f8f8;
+  border: none;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.feedback-close-btn-solid:hover {
+  background: #eee;
+  color: #333;
+}
+
+.feedback-header-solid {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.header-icon-solid {
+  width: 48px; height: 48px;
+  background: rgba(225, 48, 108, 0.1);
+  color: var(--color-primary);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.feedback-title-solid {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 4px 0;
+}
+
+.feedback-desc-solid {
+  color: #666;
+  font-size: 14px;
+  margin: 0;
+}
+
+.feedback-form-solid .form-group-solid {
+  margin-bottom: 20px;
+}
+
+.feedback-form-solid label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+}
+
+.feedback-form-solid label span {
+  font-weight: 400;
+  color: #888;
+  font-size: 13px;
+  margin-left: 4px;
+}
+
+.feedback-form-solid label .required {
+  color: var(--color-primary);
+}
+
+.feedback-form-solid input,
+.feedback-form-solid textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid #e0e0e0;
+  background: #f8f8f8;
+  color: #333;
+  font-family: inherit;
+  font-size: 15px;
+  transition: all 0.2s ease;
+}
+
+.feedback-form-solid input:focus,
+.feedback-form-solid textarea:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(225, 48, 108, 0.1);
+}
+
+.feedback-form-solid textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.char-count-solid {
+  text-align: right;
+  font-size: 12px;
+  color: #999;
+  margin-top: 6px;
+}
+
+.feedback-submit-solid {
+  width: 100%;
+  margin-top: 12px;
+  height: 48px;
+  border-radius: 14px;
+  font-size: 16px;
+}
+
+.feedback-error-solid {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.feedback-success-solid {
+  text-align: center;
+  padding: 40px 0 20px;
+}
+
+.success-icon-solid {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16a34a;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 24px;
+}
+
+.feedback-success-solid p {
+  color: #555;
+  font-size: 15px;
+  margin-bottom: 32px;
+}
+
+/* Dark mode overrides if needed, but requested solid white modal */
+[data-theme="dark"] .feedback-modal-solid {
+  background: #1a1a1a;
+  border-color: #333;
+}
+[data-theme="dark"] .feedback-title-solid { color: #fff; }
+[data-theme="dark"] .feedback-desc-solid { color: #aaa; }
+[data-theme="dark"] .feedback-form-solid label { color: #eee; }
+[data-theme="dark"] .feedback-form-solid input,
+[data-theme="dark"] .feedback-form-solid textarea {
+  background: #222; border-color: #333; color: #fff;
+}
+[data-theme="dark"] .feedback-form-solid input:focus,
+[data-theme="dark"] .feedback-form-solid textarea:focus {
+  background: #1a1a1a;
+}
+[data-theme="dark"] .feedback-close-btn-solid { background: #333; color: #ccc; }
+[data-theme="dark"] .feedback-close-btn-solid:hover { background: #444; color: #fff; }
+
+@media (max-width: 600px) {
+  .feedback-modal-solid {
+    width: calc(100% - 32px);
+    padding: 24px;
+  }
+}

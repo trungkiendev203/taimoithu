@@ -1,0 +1,14 @@
+curl 'https://s6.tuoitre.vn/api/diem-thi-thpt.htm?sbd=34000001&year=2026' \
+  -H 'accept: application/json, text/plain, */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'dnt: 1' \
+  -H 'origin: https://tuoitre.vn' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://tuoitre.vn/' \
+  -H 'sec-ch-ua: "Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Windows"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-site' \
+  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'

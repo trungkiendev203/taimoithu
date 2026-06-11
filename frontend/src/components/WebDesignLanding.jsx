@@ -21,11 +21,11 @@ const WebDesignLanding = () => {
               Nâng tầm thương hiệu của bạn với thiết kế chuẩn UX/UI, tối ưu SEO vượt trội, tốc độ tải trang thần tốc và tích hợp thanh toán tự động toàn diện.
             </p>
             <div className="wd-hero-actions">
-              <a href="https://zalo.me/0966313528" target="_blank" rel="noreferrer" className="wd-btn wd-btn-primary">
+              <a href="https://zalo.me/0966313528" target="_blank" rel="noopener noreferrer" className="wd-btn wd-btn-primary">
                 <span className="wd-btn-text">Liên hệ Zalo tư vấn</span>
                 <div className="wd-btn-glow"></div>
               </a>
-              <a href="https://zalo.me/0966313528" target="_blank" rel="noreferrer" className="wd-btn wd-btn-outline">
+              <a href="https://zalo.me/0966313528" target="_blank" rel="noopener noreferrer" className="wd-btn wd-btn-outline">
                 Xem kho giao diện mẫu
               </a>
             </div>
@@ -166,7 +166,7 @@ const WebDesignLanding = () => {
           <div className="wd-cta-content">
             <h2>Khởi tạo Website của riêng bạn ngay hôm nay</h2>
             <p>Liên hệ Zalo để nhận báo giá chi tiết và các ưu đãi mới nhất.</p>
-            <a href="https://zalo.me/0966313528" target="_blank" rel="noreferrer" className="wd-btn wd-btn-primary wd-btn-large">
+            <a href="https://zalo.me/0966313528" target="_blank" rel="noopener noreferrer" className="wd-btn wd-btn-primary wd-btn-large">
               Chat Zalo: 0966.313.528
             </a>
           </div>

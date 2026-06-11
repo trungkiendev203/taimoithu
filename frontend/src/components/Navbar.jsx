@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import FeedbackModal from './FeedbackModal';
 
 const Navbar = ({ activeView, navigateTo }) => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -50,11 +52,15 @@ const Navbar = ({ activeView, navigateTo }) => {
         </div>
 
         <div className="navbar-actions">
+          <button className="feedback-btn" onClick={() => setIsFeedbackOpen(true)} aria-label="Góp ý">
+            Góp ý
+          </button>
           <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle Dark Mode">
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
         </div>
       </div>
+      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
     </nav>
   );
 };

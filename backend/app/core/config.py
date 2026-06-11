@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     # Telegram Bot
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_ADMIN_ID: str = ""
+    TELEGRAM_CHAT_ID: str = ""
 
     # Evil0ctal Douyin/TikTok API (Docker service default, override for local dev)
     TIKWM_DOMAIN: str = "tikwm.com"

@@ -191,7 +191,7 @@ function App() {
           <FeatureHighlights />
           <div id="how-it-works"><HowItWorks /></div>
           <SupportedPlatforms />
-          <div id="faq"><FAQ /></div>
+          <div id="faq"><FAQ isActive={activeView === 'downloader'} /></div>
         </div>
 
         {activeView === 'webdesign' && (
@@ -209,7 +209,9 @@ function App() {
 
       <Footer navigateTo={navigateTo} />
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }} />
+      {activeView === 'downloader' && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }} />
+      )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(getBreadcrumbSchema()) }} />
 
       <ProgressModal 
