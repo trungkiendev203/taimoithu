@@ -1,6 +1,17 @@
 import React from 'react';
 
-const Footer = () => {
+const Footer = ({ navigateTo }) => {
+  const handleNav = (e, targetId) => {
+    e.preventDefault();
+    if (navigateTo) {
+      navigateTo('downloader', '/');
+    }
+    setTimeout(() => {
+      const el = document.getElementById(targetId);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
   return (
     <footer className="footer section-padding">
       <div className="container">
@@ -12,21 +23,21 @@ const Footer = () => {
           <div className="footer-links">
             <div className="link-group">
               <h4>Công cụ</h4>
-              <a href="#">Tải Video YouTube</a>
-              <a href="#">Tải Video TikTok</a>
-              <a href="#">Tải Video Facebook</a>
+              <a href="/" onClick={(e) => { e.preventDefault(); if(navigateTo) navigateTo('downloader', '/'); }}>Tải Video YouTube</a>
+              <a href="/" onClick={(e) => { e.preventDefault(); if(navigateTo) navigateTo('downloader', '/'); }}>Tải Video TikTok</a>
+              <a href="/" onClick={(e) => { e.preventDefault(); if(navigateTo) navigateTo('downloader', '/'); }}>Tải Video Facebook</a>
             </div>
             <div className="link-group">
               <h4>Hỗ trợ</h4>
-              <a href="#">Hướng dẫn sử dụng</a>
-              <a href="#">Câu hỏi thường gặp</a>
-              <a href="#">Liên hệ</a>
+              <a href="/#how-it-works" onClick={(e) => handleNav(e, 'how-it-works')}>Hướng dẫn sử dụng</a>
+              <a href="/#faq" onClick={(e) => handleNav(e, 'faq')}>Câu hỏi thường gặp</a>
+              <a href="https://zalo.me/0966313528" target="_blank" rel="noopener noreferrer">Liên hệ Zalo</a>
             </div>
             <div className="link-group">
               <h4>Pháp lý</h4>
-              <a href="#">Điều khoản sử dụng</a>
-              <a href="#">Chính sách bảo mật</a>
-              <a href="#">DMCA</a>
+              <span className="footer-link-dummy">Điều khoản sử dụng</span>
+              <span className="footer-link-dummy">Chính sách bảo mật</span>
+              <span className="footer-link-dummy">DMCA</span>
             </div>
           </div>
         </div>

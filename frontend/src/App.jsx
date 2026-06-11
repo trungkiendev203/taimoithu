@@ -119,6 +119,49 @@ function App() {
     }
   };
 
+  const webAppSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Tải Mọi Thứ",
+    "url": "https://taimoithu.com/",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "All",
+    "description": "Công cụ tải video trực tuyến chất lượng cao từ YouTube, TikTok, Facebook và nhiều nền tảng khác hoàn toàn miễn phí."
+  };
+
+  const getBreadcrumbSchema = () => {
+    let items = [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Trang Chủ",
+        "item": "https://taimoithu.com/"
+      }
+    ];
+
+    if (activeView === 'webdesign') {
+      items.push({
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Nhận Thiết Kế Website",
+        "item": "https://taimoithu.com/nhan-tao-website"
+      });
+    } else if (activeView === 'thpt') {
+      items.push({
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Tra Cứu Điểm Thi",
+        "item": "https://taimoithu.com/tra-cuu-diem-thi"
+      });
+    }
+
+    return {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": items
+    };
+  };
+
   return (
     <div className="app-container">
       <Navbar activeView={activeView} navigateTo={navigateTo} />
@@ -146,9 +189,9 @@ function App() {
           )}
 
           <FeatureHighlights />
-          <HowItWorks />
+          <div id="how-it-works"><HowItWorks /></div>
           <SupportedPlatforms />
-          <FAQ />
+          <div id="faq"><FAQ /></div>
         </div>
 
         {activeView === 'webdesign' && (
@@ -164,7 +207,10 @@ function App() {
         )}
       </main>
 
-      <Footer />
+      <Footer navigateTo={navigateTo} />
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(getBreadcrumbSchema()) }} />
 
       <ProgressModal 
         jobId={activeJobId} 

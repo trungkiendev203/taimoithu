@@ -22,6 +22,19 @@ const FAQ = () => {
 
   const [openIdx, setOpenIdx] = useState(0);
 
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqs.map(faq => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
+      }
+    }))
+  };
+
   return (
     <section className="faq-section section-padding">
       <div className="container faq-container">
@@ -41,6 +54,7 @@ const FAQ = () => {
           ))}
         </div>
       </div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
     </section>
   );
 };
